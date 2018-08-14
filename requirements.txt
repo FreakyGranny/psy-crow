@@ -1,2 +1,3 @@
 paho-mqtt==1.3.1
 PyYAML==3.13
+pyfirmata==1.0.3

@@ -1,7 +1,5 @@
 import json
 
-from led import LedTask
-
 FIELD_LED = "led"
 FIELD_LED_COLOR = "color"
 FIELD_LED_SECONDS = "seconds"
@@ -11,6 +9,17 @@ FIELD_MESSAGES_COLOR = "color"
 FIELD_MESSAGES_TITLE = "title"
 FIELD_MESSAGES_TEXT = "text"
 FIELD_MESSAGES_RESOLVE_COLOR = "resolve_color"
+
+
+class LedTask:
+    def __init__(self, hex_color, seconds):
+        self.hex_color = hex_color.upper()
+        self.seconds = seconds
+
+    @property
+    def rgb_color(self):
+        # todo this function should return color in RGB
+        return 255, 0, 0
 
 
 class Message:

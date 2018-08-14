@@ -4,6 +4,7 @@ import queue
 
 from gui import MainApp
 from config import Config
+from led import ArduinoThread
 from mqtt import MqttThread, MESSAGE_EVENT
 
 
@@ -17,8 +18,9 @@ def main():
             backgrounds["#{}".format(item.split(".png")[0].upper())] = item_path
 
     message_queue = queue.Queue()
+    led_queue = queue.Queue()
     root = tk.Tk()
-    root.title("Alert visualiser v0.2.0")
+    root.title("Psy-crow v0.4.0")
 
     app = MainApp(
         parent=root,
@@ -28,13 +30,22 @@ def main():
     )
 
     root.bind(MESSAGE_EVENT, lambda e: app.incoming_popup())
-    t = MqttThread(
+    mqtt_thread = MqttThread(
         config=config.mqtt_connection,
         root=root,
-        storage=message_queue,
+        message_queue=message_queue,
+        led_queue=led_queue,
     )
-    t.setDaemon(True)
-    t.start()
+    mqtt_thread.setDaemon(True)
+    mqtt_thread.start()
+    arduino_thread = ArduinoThread(
+        root=root,
+        message_queue=message_queue,
+        led_queue=led_queue,
+    )
+    arduino_thread.setDaemon(True)
+    arduino_thread.start()
+
     root.mainloop()
 
 
