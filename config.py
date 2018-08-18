@@ -16,6 +16,8 @@ class Config:
     FIELD_BG_DIR = "background_dir"
     FIELD_COUNTERS = "counters"
     FIELD_SHOW_TIME = "show_time"
+    FIELD_RECEIVERS = "receivers"
+    FIELD_AM_HOST = "am_host"
 
     def __init__(self):
         if not os.path.exists(CONFIG_FILE_NAME) or not os.path.isfile(CONFIG_FILE_NAME):
@@ -29,3 +31,5 @@ class Config:
         self.counters = yaml_content.get(self.FIELD_COUNTERS, [])
         self.mqtt_connection = yaml_content.get(self.FIELD_MQTT_CONNECTION)
         self.show_time = yaml_content.get(self.FIELD_SHOW_TIME)
+        self.am_host = yaml_content.get(self.FIELD_AM_HOST)
+        self.receivers = yaml_content.get(self.FIELD_RECEIVERS)

@@ -3,28 +3,27 @@ from time import sleep
 
 import paho.mqtt.client as mqtt
 
-from parser import get_led_options, get_messages, Message
+from parser import get_messages, Message
 
 MESSAGE_EVENT = "<<MessageGenerated>>"
+UPDATE_EVENT = "<<UpdateCounters>>"
 
 
 class QClient(mqtt.Client):
-    def __init__(self, message_queue, led_queue, root, topic):
+    def __init__(self, message_queue, root, topic):
         mqtt.Client.__init__(self)
         self.message_queue = message_queue
-        self.led_queue = led_queue
         self.root = root
         self.topic = topic
 
 
 class MqttThread(Thread):
-    def __init__(self, config, root, message_queue, led_queue):
+    def __init__(self, config, root, message_queue):
         Thread.__init__(self)
         self.config = config
         self.root = root
         self.client = QClient(
             message_queue=message_queue,
-            led_queue=led_queue,
             root=self.root,
             topic=self.config["topic"]
         )
@@ -40,11 +39,11 @@ class MqttThread(Thread):
 
     @staticmethod
     def _on_message(client, userdata, msg):
-        client.led_queue.put(get_led_options(msg.payload.decode("utf-8")))
-
+        client.root.event_generate(UPDATE_EVENT)
         for message in get_messages(msg.payload.decode("utf-8")):
             client.message_queue.put(message)
-            client.root.event_generate(MESSAGE_EVENT)
+
+        client.root.event_generate(MESSAGE_EVENT)
 
     def run(self):
         sleep(2)

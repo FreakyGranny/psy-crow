@@ -1,14 +1,14 @@
 import json
 
-FIELD_LED = "led"
-FIELD_LED_COLOR = "color"
-FIELD_LED_SECONDS = "seconds"
+FIELD_LED_COLOR = "top_color"
+FIELD_LED_IS_FIRING = "is_firing"
+
+FIELD_COUNTERS = "counters"
 
 FIELD_MESSAGES = "messages"
 FIELD_MESSAGES_COLOR = "color"
 FIELD_MESSAGES_TITLE = "title"
 FIELD_MESSAGES_TEXT = "text"
-FIELD_MESSAGES_RESOLVE_COLOR = "resolve_color"
 
 
 class LedTask:
@@ -32,14 +32,17 @@ class Message:
 
 def get_led_options(json_message):
     data = json.loads(json_message)
-    led_section = data.get(FIELD_LED)
-    if not led_section:
-        return
 
     return LedTask(
-        hex_color=led_section.get(FIELD_LED_COLOR, "#000000"),
-        seconds=led_section.get(FIELD_LED_SECONDS, 1)
+        hex_color=data.get(FIELD_LED_COLOR, "#000000"),
+        seconds=0 if data.get(FIELD_LED_IS_FIRING, False) else 60
     )
+
+
+def get_counters(json_message):
+    data = json.loads(json_message)
+
+    return data.get(FIELD_COUNTERS, {})
 
 
 def get_messages(json_message):
@@ -53,5 +56,4 @@ def get_messages(json_message):
             title=message.get(FIELD_MESSAGES_TITLE, "None"),
             text=message.get(FIELD_MESSAGES_TEXT, "None"),
             color=message.get(FIELD_MESSAGES_COLOR, "#FFFFFF"),
-            resolve_color=message.get(FIELD_MESSAGES_RESOLVE_COLOR, "#FFFFFF"),
         )

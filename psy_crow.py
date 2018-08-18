@@ -5,7 +5,8 @@ import queue
 from gui import MainApp
 from config import Config
 from led import ArduinoThread
-from mqtt import MqttThread, MESSAGE_EVENT
+from mqtt import MqttThread, MESSAGE_EVENT, UPDATE_EVENT
+from am_update import CounterGetter
 
 
 def main():
@@ -20,21 +21,28 @@ def main():
     message_queue = queue.Queue()
     led_queue = queue.Queue()
     root = tk.Tk()
-    root.title("Psy-crow v0.4.0")
+    root.title("Psy-crow v0.5.0")
+
+    counter_updater = CounterGetter(
+        host=config.am_host,
+        receivers=config.receivers,
+        led_queue=led_queue,
+    )
 
     app = MainApp(
         parent=root,
         storage=message_queue,
         backgrounds=backgrounds,
         config=config,
+        counter_updater=counter_updater,
     )
 
-    root.bind(MESSAGE_EVENT, lambda e: app.incoming_popup())
+    root.bind(MESSAGE_EVENT, lambda e: app.check_queue())
+    root.bind(UPDATE_EVENT, lambda e: app.force_update())
     mqtt_thread = MqttThread(
         config=config.mqtt_connection,
         root=root,
         message_queue=message_queue,
-        led_queue=led_queue,
     )
     mqtt_thread.setDaemon(True)
     mqtt_thread.start()

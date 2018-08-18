@@ -3,23 +3,25 @@ from tkinter import LEFT, NW, X, Y
 
 
 class MainApp:
-    def __init__(self, parent, config, storage, backgrounds):
+    def __init__(self, parent, config, storage, backgrounds, counter_updater):
         self.parent = parent
         self.screen_width = self.parent.winfo_screenwidth()
         self.screen_height = self.parent.winfo_screenheight()
         self.frame = Frame(self.parent)
         self.storage = storage
         self.backgrounds = backgrounds
-        self.counters = {key.upper(): 0 for key in config.counters}
+
+        self.counter_updater = counter_updater
+        self.counters = config.counters
         self.counter_app = None
         self.popup_show_time = int(config.show_time) * 1000
 
-        max_slots = int(self.screen_height / MessagePopup.HEGHT)
-        self.slots = {slot_num: None for slot_num in reversed(range(0, max_slots))}
+        self.max_slots = int(self.screen_height / MessagePopup.HEGHT)
+        self.slots = {slot_num: None for slot_num in range(0, self.max_slots)}
 
         self.host_label = Label(
             self.frame,
-            width=25,
+            width=30,
             text="mqtt://{}:{}\nTopic: {}".format(
                 config.mqtt_connection["host"],
                 config.mqtt_connection["port"],
@@ -27,36 +29,37 @@ class MainApp:
             ),
         )
         self.host_label.pack()
-        if self.counters:
-            self.counter_button = Button(
-                self.frame,
-                text='show/hide counters',
-                width=25,
-                command=self.counter_window
-            )
-            self.counter_button.pack()
+        self.counter_button = Button(
+            self.frame,
+            text='show/hide counters',
+            width=30,
+            command=self.counter_window
+        )
+        self.counter_button.pack()
 
         self.close_button = Button(
             self.frame,
             text='Quit',
-            width=25,
+            width=30,
             command=self.parent.destroy
         )
         self.close_button.pack()
         self.frame.pack()
 
     def _get_free_slot(self):
-        for pos, slot in self.slots.items():
-            if slot is None:
+        for pos in reversed(range(0, self.max_slots)):
+            if self.slots[pos] is None:
                 return pos
 
-    def incoming_popup(self):
-        for slot in self.slots.values():
-            if slot is None:
-                self.new_popup()
-                return
+    def force_update(self):
+        self.counter_updater.update_counters(force=True)
 
-        self.parent.after(500, self.incoming_popup)
+    def check_queue(self):
+        if self.storage.empty():
+            return
+        self.new_popup()
+
+        self.parent.after(500, self.check_queue)
 
     def _get_background(self, color):
         if color in self.backgrounds.keys():
@@ -71,19 +74,24 @@ class MainApp:
         self.counter_app = CounterWindow(
             parent=Toplevel(self.parent),
             screen_width=self.screen_width,
-            label_colors=self.counters.keys()
+            label_colors=self.counters
         )
         self.update_counter_window()
 
     def update_counter_window(self):
+        counters = self.counter_updater.get_counters()
+        self.parent.after(60000, self.update_counter_window)
+
         if not self.counter_app:
             return
 
-        for color, value in self.counters.items():
+        for color, value in counters.items():
             self.counter_app.set_counter(color, value)
 
     def new_popup(self):
         pos = self._get_free_slot()
+        if pos is None:
+            return
         msg = self.storage.get_nowait()
         newWindow = Toplevel(self.parent)
 
@@ -99,13 +107,6 @@ class MainApp:
         self.slots[pos] = app
         newWindow.after(self.popup_show_time, app.quit)
         newWindow.after(self.popup_show_time + 500, lambda: self._clear_slot(pos))
-
-        if msg.color in self.counters.keys():
-            self.counters[msg.color] += 1
-
-        if msg.resolve_color in self.counters.keys():
-            if self.counters[msg.resolve_color] > 0:
-                self.counters[msg.resolve_color] -= 1
 
         self.update_counter_window()
 
@@ -167,7 +168,8 @@ class CounterWindow(Popup):
         self.pack()
         self.config(bg="#1f1f1f")
         self.labels = {}
-        for label_color in label_colors:
+        for label_pos in sorted(label_colors.keys()):
+            label_color = label_colors[label_pos]
             self.labels[label_color] = Label(
                 self,
                 background=label_color,
