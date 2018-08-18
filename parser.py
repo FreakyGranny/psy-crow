@@ -30,18 +30,14 @@ class Message:
         self.resolve_color = resolve_color.upper() if resolve_color else resolve_color
 
 
-def get_led_options(json_message):
-    data = json.loads(json_message)
-
+def get_led_options(data):
     return LedTask(
         hex_color=data.get(FIELD_LED_COLOR, "#000000"),
         seconds=0 if data.get(FIELD_LED_IS_FIRING, False) else 60
     )
 
 
-def get_counters(json_message):
-    data = json.loads(json_message)
-
+def get_counters(data):
     return data.get(FIELD_COUNTERS, {})
 
 

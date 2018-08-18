@@ -3,12 +3,12 @@ from tkinter import LEFT, NW, X, Y
 
 
 class MainApp:
-    def __init__(self, parent, config, storage, backgrounds, counter_updater):
+    def __init__(self, parent, config, message_queue, backgrounds, counter_updater):
         self.parent = parent
         self.screen_width = self.parent.winfo_screenwidth()
         self.screen_height = self.parent.winfo_screenheight()
         self.frame = Frame(self.parent)
-        self.storage = storage
+        self.message_queue = message_queue
         self.backgrounds = backgrounds
 
         self.counter_updater = counter_updater
@@ -52,10 +52,10 @@ class MainApp:
                 return pos
 
     def force_update(self):
-        self.counter_updater.update_counters(force=True)
+        self.counter_updater.force_update()
 
     def check_queue(self):
-        if self.storage.empty():
+        if self.message_queue.empty():
             return
         self.new_popup()
 
@@ -79,24 +79,23 @@ class MainApp:
         self.update_counter_window()
 
     def update_counter_window(self):
-        counters = self.counter_updater.get_counters()
-        self.parent.after(60000, self.update_counter_window)
-
         if not self.counter_app:
             return
 
+        counters = self.counter_updater.get_counters()
         for color, value in counters.items():
             self.counter_app.set_counter(color, value)
+        self.parent.after(60000, self.update_counter_window)
 
     def new_popup(self):
         pos = self._get_free_slot()
         if pos is None:
             return
-        msg = self.storage.get_nowait()
-        newWindow = Toplevel(self.parent)
+        msg = self.message_queue.get_nowait()
+        new_window = Toplevel(self.parent)
 
         app = MessagePopup(
-            parent=newWindow,
+            parent=new_window,
             position=pos,
             color=msg.color,
             title=msg.title,
@@ -105,8 +104,8 @@ class MainApp:
         )
 
         self.slots[pos] = app
-        newWindow.after(self.popup_show_time, app.quit)
-        newWindow.after(self.popup_show_time + 500, lambda: self._clear_slot(pos))
+        new_window.after(self.popup_show_time, app.quit)
+        new_window.after(self.popup_show_time + 500, lambda: self._clear_slot(pos))
 
         self.update_counter_window()
 

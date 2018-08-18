@@ -20,10 +20,14 @@ class Config:
     FIELD_AM_HOST = "am_host"
 
     def __init__(self):
-        if not os.path.exists(CONFIG_FILE_NAME) or not os.path.isfile(CONFIG_FILE_NAME):
-            raise FileNotFoundError("{} not found".format(CONFIG_FILE_NAME))
+        config_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            CONFIG_FILE_NAME
+        )
+        if not os.path.exists(config_path) or not os.path.isfile(config_path):
+            raise FileNotFoundError("{} not found".format(config_path))
 
-        with open(CONFIG_FILE_NAME, 'r') as source:
+        with open(config_path, 'r') as source:
             yaml_content = yaml.safe_load(source.read())
             if not yaml_content:
                 raise EmptyConfigFileError()
