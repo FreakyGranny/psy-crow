@@ -11,15 +11,26 @@ FIELD_MESSAGES_TITLE = "title"
 FIELD_MESSAGES_TEXT = "text"
 
 
+class RgbColor(dict):
+    RED = "red"
+    GREEN = "green"
+    BLUE = "blue"
+
+    def __init__(self, colors: tuple):
+        super().__init__(
+            {
+                self.RED: colors[0],
+                self.GREEN: colors[1],
+                self.BLUE: colors[2],
+            }
+        )
+
+
 class LedTask:
     def __init__(self, hex_color, seconds):
         self.hex_color = hex_color.upper()
         self.seconds = seconds
-
-    @property
-    def rgb_color(self):
-        # todo this function should return color in RGB
-        return 255, 0, 0
+        self.rgb_color = RgbColor(tuple(int(self.hex_color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4)))
 
 
 class Message:

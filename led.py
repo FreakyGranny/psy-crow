@@ -4,7 +4,7 @@ from time import sleep
 import serial
 from pyfirmata import Board, BOARDS
 
-from parser import Message
+from parser import Message, LedTask, RgbColor
 from mqtt import MESSAGE_EVENT
 
 
@@ -54,7 +54,13 @@ class Arduino(Board):
 
 
 class ArduinoThread(Thread):
-    BOARD_LED = 9
+    BOARD_FAN_LED = 6
+    BOARD_R_LED = 10
+    BOARD_G_LED = 11
+    BOARD_B_LED = 9
+
+    STEPS_TO_FADE = 30
+    FADE_TIMEOUT = 0.1
 
     def __init__(self, root, led_queue, message_queue):
         Thread.__init__(self)
@@ -62,15 +68,72 @@ class ArduinoThread(Thread):
         self.queue = led_queue
         self.message_queue = message_queue
         self.board = Arduino()
+        self.red_pin = None
+        self.green_pin = None
+        self.blue_pin = None
+
+        self.is_light_on = False
+        self.is_fade_out = False
+        self.color = RgbColor((0, 0, 0))
+        self.current_color = RgbColor((0, 0, 0))
+        self.steps = RgbColor((0, 0, 0))
+        self.last_step = 0
+        self.led_time = 0.0
+        self.timer = 0.0
 
     def _setup(self):
         self.board.setup()
+        self.red_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_R_LED))
+        self.green_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_G_LED))
+        self.blue_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_B_LED))
 
-    def turn_on(self):
-        self.board.digital[self.BOARD_LED].write(1)
+    def apply_led_light(self):
+        self.red_pin.write(self.current_color[RgbColor.RED] / 255)
+        self.green_pin.write(self.current_color[RgbColor.GREEN] / 255)
+        self.blue_pin.write(self.current_color[RgbColor.BLUE] / 255)
 
-    def turn_off(self):
-        self.board.digital[self.BOARD_LED].write(0)
+    def set_led_options(self, task: LedTask):
+        self.color = task.rgb_color
+        self.led_time = task.seconds
+        self.timer = 0.0
+        for level_key, level_value in task.rgb_color.items():
+            level_value = level_value / self.STEPS_TO_FADE
+            self.steps[level_key] = level_value
+        self.is_light_on = True
+        self.is_fade_out = False
+
+    def fade(self):
+        modifier = -1 if self.is_fade_out else 1
+
+        for step in range(0, 5):
+            self.last_step += 1
+
+            if self.last_step > self.STEPS_TO_FADE:
+                self.is_fade_out = not self.is_fade_out
+                self.last_step = 0
+                break
+
+            for level_key in self.current_color.keys():
+                level_value = self.current_color[level_key] + modifier * self.steps[level_key]
+
+                level_value = self.color[level_key] if level_value > self.color[level_key] else level_value
+                level_value = 255 if level_value > 255 else level_value
+                level_value = 0 if level_value < 0 else level_value
+
+                self.current_color[level_key] = int(level_value)
+            self.apply_led_light()
+            sleep(self.FADE_TIMEOUT)
+            self.timer += self.FADE_TIMEOUT
+
+    def check_timer(self):
+        if self.led_time == 0:
+            return
+
+        if self.timer >= self.led_time:
+            self.is_light_on = False
+            self.timer = 0.0
+            self.current_color = RgbColor((0, 0, 0))
+            self.apply_led_light()
 
     def run(self):
         sleep(1)
@@ -86,19 +149,22 @@ class ArduinoThread(Thread):
                 color="#707070"
             )
         )
-        self.root.event_generate(MESSAGE_EVENT)
+        if self.root:
+            self.root.event_generate(MESSAGE_EVENT)
 
         if not self.board.connected:
             return
 
+        # turn on fan
+        self.board.digital[self.BOARD_FAN_LED].write(1)
+
         while True:
-            sleep(1)
-            if self.queue.empty():
+            if not self.queue.empty():
+                self.set_led_options(self.queue.get_nowait())
+
+            if not self.is_light_on:
+                sleep(0.5)
                 continue
 
-            task = self.queue.get_nowait()
-            if task.seconds == 0:
-                self.turn_on()
-            else:
-                self.turn_off()
-
+            self.fade()
+            self.check_timer()
