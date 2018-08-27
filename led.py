@@ -67,6 +67,7 @@ class ArduinoThread(Thread):
         self.root = root
         self.queue = led_queue
         self.message_queue = message_queue
+        self.is_last_state_firing = False
         self.board = Arduino()
         self.red_pin = None
         self.green_pin = None
@@ -93,6 +94,10 @@ class ArduinoThread(Thread):
         self.blue_pin.write(self.current_color[RgbColor.BLUE] / 255)
 
     def set_led_options(self, task: LedTask):
+        if task.is_firing == self.is_last_state_firing:
+            return
+        self.is_last_state_firing = task.is_firing
+
         self.color = task.rgb_color
         self.led_time = task.seconds
         self.timer = 0.0

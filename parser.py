@@ -27,9 +27,10 @@ class RgbColor(dict):
 
 
 class LedTask:
-    def __init__(self, hex_color, seconds):
+    def __init__(self, hex_color, is_firing, seconds):
         self.hex_color = hex_color.upper()
         self.seconds = seconds
+        self.is_firing = is_firing
         self.rgb_color = RgbColor(tuple(int(self.hex_color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4)))
 
 
@@ -44,6 +45,7 @@ class Message:
 def get_led_options(data):
     return LedTask(
         hex_color=data.get(FIELD_LED_COLOR, "#000000"),
+        is_firing=data.get(FIELD_LED_IS_FIRING, False),
         seconds=0 if data.get(FIELD_LED_IS_FIRING, False) else 60
     )
 
