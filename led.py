@@ -54,7 +54,6 @@ class Arduino(Board):
 
 
 class ArduinoThread(Thread):
-    BOARD_FAN_LED = 6
     BOARD_R_LED = 10
     BOARD_G_LED = 11
     BOARD_B_LED = 9
@@ -89,9 +88,9 @@ class ArduinoThread(Thread):
         self.blue_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_B_LED))
 
     def apply_led_light(self):
-        self.red_pin.write(self.current_color[RgbColor.RED] / 255)
-        self.green_pin.write(self.current_color[RgbColor.GREEN] / 255)
-        self.blue_pin.write(self.current_color[RgbColor.BLUE] / 255)
+        self.red_pin.write(1.0 - self.current_color[RgbColor.RED] / 255)
+        self.green_pin.write(1.0 - self.current_color[RgbColor.GREEN] / 255)
+        self.blue_pin.write(1.0 - self.current_color[RgbColor.BLUE] / 255)
 
     def set_led_options(self, task: LedTask):
         if task.is_firing == self.is_last_state_firing:
@@ -160,8 +159,10 @@ class ArduinoThread(Thread):
         if not self.board.connected:
             return
 
-        # turn on fan
-        self.board.digital[self.BOARD_FAN_LED].write(1)
+        # turn off led
+        self.red_pin.write(1.0)
+        self.green_pin.write(1.0)
+        self.blue_pin.write(1.0)
 
         while True:
             if not self.queue.empty():
