@@ -25,7 +25,7 @@ def main():
     message_queue = queue.Queue()
     led_queue = queue.Queue()
     root = tk.Tk()
-    root.title("Psy-crow v0.8.0")
+    root.title("Psy-crow v0.9.0")
 
     counter_updater = CounterGetter(
         host=config.am_host,
@@ -56,8 +56,6 @@ def main():
     mqtt_thread.setDaemon(True)
     mqtt_thread.start()
     arduino_thread = ArduinoThread(
-        root=root,
-        message_queue=message_queue,
         led_queue=led_queue,
     )
     arduino_thread.setDaemon(True)

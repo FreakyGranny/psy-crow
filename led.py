@@ -2,10 +2,10 @@ from threading import Thread
 from time import sleep
 
 import serial
+from serial.serialutil import SerialException
 from pyfirmata import Board, BOARDS
 
-from parser import Message, LedTask, RgbColor
-from mqtt import MESSAGE_EVENT
+from parser import LedTask, RgbColor
 
 
 class ArduinoException(Exception):
@@ -61,11 +61,9 @@ class ArduinoThread(Thread):
     STEPS_TO_FADE = 30
     FADE_TIMEOUT = 0.1
 
-    def __init__(self, root, led_queue, message_queue):
+    def __init__(self, led_queue):
         Thread.__init__(self)
-        self.root = root
         self.queue = led_queue
-        self.message_queue = message_queue
         self.is_last_state_firing = False
         self.board = Arduino()
         self.red_pin = None
@@ -88,9 +86,12 @@ class ArduinoThread(Thread):
         self.blue_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_B_LED))
 
     def apply_led_light(self):
-        self.red_pin.write(1.0 - self.current_color[RgbColor.RED] / 255)
-        self.green_pin.write(1.0 - self.current_color[RgbColor.GREEN] / 255)
-        self.blue_pin.write(1.0 - self.current_color[RgbColor.BLUE] / 255)
+        try:
+            self.red_pin.write(1.0 - self.current_color[RgbColor.RED] / 255)
+            self.green_pin.write(1.0 - self.current_color[RgbColor.GREEN] / 255)
+            self.blue_pin.write(1.0 - self.current_color[RgbColor.BLUE] / 255)
+        except SerialException:
+            self.board.connected = False
 
     def set_led_options(self, task: LedTask):
         if task.is_firing == self.is_last_state_firing:
@@ -141,30 +142,15 @@ class ArduinoThread(Thread):
 
     def run(self):
         sleep(1)
-        message = "Arduino successfully connected"
-        try:
-            self._setup()
-        except ArduinoException as e:
-            message = str(e)
-        self.message_queue.put(
-            Message(
-                title="System",
-                text=message,
-                color="#707070"
-            )
-        )
-        if self.root:
-            self.root.event_generate(MESSAGE_EVENT)
-
-        if not self.board.connected:
-            return
-
-        # turn off led
-        self.red_pin.write(1.0)
-        self.green_pin.write(1.0)
-        self.blue_pin.write(1.0)
-
         while True:
+            if not self.board.connected:
+                try:
+                    self._setup()
+                    self.current_color = RgbColor((0, 0, 0))
+                    self.apply_led_light()
+                except ArduinoException as e:
+                    print(str(e))
+
             if not self.queue.empty():
                 self.set_led_options(self.queue.get_nowait())
 
