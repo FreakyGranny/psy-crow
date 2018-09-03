@@ -142,7 +142,7 @@ class ArduinoThread(Thread):
     def run(self):
         sleep(1)
         while True:
-            if not self.board.connected:
+            if not self.board_connected:
                 try:
                     self._setup()
                     self.current_color = RgbColor((0, 0, 0))
