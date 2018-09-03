@@ -25,7 +25,7 @@ def main():
     message_queue = queue.Queue()
     led_queue = queue.Queue()
     root = tk.Tk()
-    root.title("Psy-crow v0.9.0")
+    root.title("Psy-crow v0.9.2")
 
     counter_updater = CounterGetter(
         host=config.am_host,

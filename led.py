@@ -14,14 +14,10 @@ class ArduinoException(Exception):
 
 class Arduino(Board):
     def __init__(self):
-        self.connected = False
-
-    def setup(self):
         port = self.discover_port()
         if not port:
             raise ArduinoException("No Arduino found")
         Board.__init__(self, port, layout=BOARDS['arduino'], baudrate=57600, name=None, timeout=None)
-        self.connected = True
 
     @staticmethod
     def discover_port():
@@ -65,7 +61,8 @@ class ArduinoThread(Thread):
         Thread.__init__(self)
         self.queue = led_queue
         self.is_last_state_firing = False
-        self.board = Arduino()
+        self.board = None
+        self.board_connected = False
         self.red_pin = None
         self.green_pin = None
         self.blue_pin = None
@@ -80,10 +77,11 @@ class ArduinoThread(Thread):
         self.timer = 0.0
 
     def _setup(self):
-        self.board.setup()
+        self.board = Arduino()
         self.red_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_R_LED))
         self.green_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_G_LED))
         self.blue_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_B_LED))
+        self.board_connected = True
 
     def apply_led_light(self):
         try:
@@ -91,11 +89,12 @@ class ArduinoThread(Thread):
             self.green_pin.write(1.0 - self.current_color[RgbColor.GREEN] / 255)
             self.blue_pin.write(1.0 - self.current_color[RgbColor.BLUE] / 255)
         except SerialException:
-            self.board.connected = False
+            self.board_connected = False
 
     def set_led_options(self, task: LedTask):
-        if task.is_firing == self.is_last_state_firing:
-            return
+        if not self.is_last_state_firing:
+            if task.is_firing == self.is_last_state_firing:
+                return
         self.is_last_state_firing = task.is_firing
 
         self.color = task.rgb_color
