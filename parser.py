@@ -1,6 +1,6 @@
 import json
 
-FIELD_LED_COLOR = "top_color"
+FIELD_LED_COLOR = "led_color"
 FIELD_LED_IS_FIRING = "is_firing"
 
 FIELD_COUNTERS = "counters"

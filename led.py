@@ -62,7 +62,6 @@ class ArduinoThread(Thread):
         self.queue = led_queue
         self.is_last_state_firing = False
         self.board = None
-        self.board_connected = False
         self.red_pin = None
         self.green_pin = None
         self.blue_pin = None
@@ -81,15 +80,14 @@ class ArduinoThread(Thread):
         self.red_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_R_LED))
         self.green_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_G_LED))
         self.blue_pin = self.board.get_pin('d:{}:p'.format(self.BOARD_B_LED))
-        self.board_connected = True
 
     def apply_led_light(self):
         try:
             self.red_pin.write(1.0 - self.current_color[RgbColor.RED] / 255)
             self.green_pin.write(1.0 - self.current_color[RgbColor.GREEN] / 255)
             self.blue_pin.write(1.0 - self.current_color[RgbColor.BLUE] / 255)
-        except SerialException:
-            self.board_connected = False
+        except SerialException as e:
+            print(e)
 
     def set_led_options(self, task: LedTask):
         if not self.is_last_state_firing:
@@ -141,15 +139,15 @@ class ArduinoThread(Thread):
 
     def run(self):
         sleep(1)
-        while True:
-            if not self.board_connected:
-                try:
-                    self._setup()
-                    self.current_color = RgbColor((0, 0, 0))
-                    self.apply_led_light()
-                except ArduinoException as e:
-                    print(str(e))
+        try:
+            self._setup()
+            self.current_color = RgbColor((0, 0, 0))
+            self.apply_led_light()
+        except ArduinoException as e:
+            print(str(e))
+            return
 
+        while True:
             if not self.queue.empty():
                 self.set_led_options(self.queue.get_nowait())
 
