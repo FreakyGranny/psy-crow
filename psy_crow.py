@@ -9,6 +9,36 @@ from mqtt import MqttThread, MESSAGE_EVENT, UPDATE_EVENT
 from am_update import CounterGetter, UpdateThread
 
 
+class Communicator:
+    def __init__(self, led_enabled):
+        self.message_queue = queue.Queue()
+        if led_enabled:
+            self.led_queue = queue.Queue()
+        else:
+            self.led_queue = None
+
+    def is_message_empty(self):
+        return self.message_queue.empty()
+
+    def get_message(self):
+        return self.message_queue.get_nowait()
+
+    def put_message(self, data):
+        return self.message_queue.put(data)
+
+    def is_led_empty(self):
+        if self.led_queue:
+            return self.led_queue.empty()
+
+    def get_led_task(self):
+        if self.led_queue:
+            return self.led_queue.get_nowait()
+
+    def put_led_task(self, task):
+        if self.led_queue:
+            self.led_queue.put(task)
+
+
 def main():
     config = Config()
 
@@ -22,20 +52,19 @@ def main():
         if os.path.isfile(item_path):
             backgrounds["#{}".format(item.split(".png")[0].upper())] = item_path
 
-    message_queue = queue.Queue()
-    led_queue = queue.Queue()
+    communicator = Communicator(config.led_enabled)
     root = tk.Tk()
-    root.title("Psy-crow v0.10.0")
+    root.title("Psy-crow v0.11.0")
 
     counter_updater = CounterGetter(
         host=config.am_host,
         receivers=config.receivers,
-        led_queue=led_queue,
+        communicator=communicator,
     )
 
     app = MainApp(
         parent=root,
-        message_queue=message_queue,
+        communicator=communicator,
         backgrounds=backgrounds,
         config=config,
         counter_updater=counter_updater,
@@ -51,15 +80,17 @@ def main():
     mqtt_thread = MqttThread(
         config=config.mqtt_connection,
         root=root,
-        message_queue=message_queue,
+        communicator=communicator,
     )
     mqtt_thread.setDaemon(True)
     mqtt_thread.start()
-    arduino_thread = ArduinoThread(
-        led_queue=led_queue,
-    )
-    arduino_thread.setDaemon(True)
-    arduino_thread.start()
+
+    if config.led_enabled:
+        arduino_thread = ArduinoThread(
+            communicator=communicator,
+        )
+        arduino_thread.setDaemon(True)
+        arduino_thread.start()
 
     root.mainloop()
 

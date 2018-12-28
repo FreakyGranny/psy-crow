@@ -57,9 +57,9 @@ class ArduinoThread(Thread):
     STEPS_TO_FADE = 30
     FADE_TIMEOUT = 0.1
 
-    def __init__(self, led_queue):
+    def __init__(self, communicator):
         Thread.__init__(self)
-        self.queue = led_queue
+        self.communicator = communicator
         self.is_last_state_firing = False
         self.board = None
         self.red_pin = None

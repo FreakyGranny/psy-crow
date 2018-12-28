@@ -10,10 +10,10 @@ from parser import get_led_options, get_counters
 class CounterGetter:
     PATH = "alerts"
 
-    def __init__(self, host, receivers, led_queue):
+    def __init__(self, host, receivers, communicator):
         self.host = host
         self.receivers = receivers
-        self.led_queue = led_queue
+        self.communicator = communicator
         self.counters = {}
         self.last_update = datetime.now() - timedelta(hours=1)
         self.ttl = 60
@@ -33,7 +33,7 @@ class CounterGetter:
             return
 
         self.counters = get_counters(response.json())
-        self.led_queue.put(get_led_options(response.json()))
+        self.communicator.put_led_task(get_led_options(response.json()))
         self.last_update = datetime.now()
 
     def get_counters(self):

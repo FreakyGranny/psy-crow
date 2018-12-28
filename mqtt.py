@@ -10,20 +10,20 @@ UPDATE_EVENT = "<<UpdateCounters>>"
 
 
 class QClient(mqtt.Client):
-    def __init__(self, message_queue, root, topic):
+    def __init__(self, communicator, root, topic):
         mqtt.Client.__init__(self)
-        self.message_queue = message_queue
+        self.communicator = communicator
         self.root = root
         self.topic = topic
 
 
 class MqttThread(Thread):
-    def __init__(self, config, root, message_queue):
+    def __init__(self, config, root, communicator):
         Thread.__init__(self)
         self.config = config
         self.root = root
         self.client = QClient(
-            message_queue=message_queue,
+            communicator=communicator,
             root=self.root,
             topic=self.config["topic"]
         )
@@ -41,7 +41,7 @@ class MqttThread(Thread):
     def _on_message(client, userdata, msg):
         client.root.event_generate(UPDATE_EVENT)
         for message in get_messages(msg.payload.decode("utf-8")):
-            client.message_queue.put(message)
+            client.communicator.put_message(message)
 
         client.root.event_generate(MESSAGE_EVENT)
 
@@ -56,7 +56,7 @@ class MqttThread(Thread):
             sleep(1)
             self.client.loop_forever()
         except Exception as e:
-            self.client.message_queue.put(
+            self.client.communicator.put_message(
                 Message(
                     title="System",
                     text=str(e),

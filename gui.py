@@ -1,14 +1,14 @@
 from tkinter import Frame, Label, Canvas, PhotoImage, Button, Toplevel
-from tkinter import LEFT, NW, X, Y
+from tkinter import LEFT, NW, X, Y, BOTH, YES
 
 
 class MainApp:
-    def __init__(self, parent, config, message_queue, backgrounds, counter_updater):
+    def __init__(self, parent, config, communicator, backgrounds, counter_updater):
         self.parent = parent
         self.screen_width = self.parent.winfo_screenwidth()
         self.screen_height = self.parent.winfo_screenheight()
         self.frame = Frame(self.parent)
-        self.message_queue = message_queue
+        self.communicator = communicator
         self.backgrounds = backgrounds
 
         self.counter_updater = counter_updater
@@ -21,7 +21,7 @@ class MainApp:
 
         self.host_label = Label(
             self.frame,
-            width=30,
+            width=40,
             text="mqtt://{}:{}\nTopic: {}".format(
                 config.mqtt_connection["host"],
                 config.mqtt_connection["port"],
@@ -32,7 +32,7 @@ class MainApp:
         self.counter_button = Button(
             self.frame,
             text='show/hide counters',
-            width=30,
+            width=40,
             command=self.counter_window
         )
         self.counter_button.pack()
@@ -40,7 +40,7 @@ class MainApp:
         self.close_button = Button(
             self.frame,
             text='Quit',
-            width=30,
+            width=40,
             command=self.parent.destroy
         )
         self.close_button.pack()
@@ -55,7 +55,7 @@ class MainApp:
         self.counter_updater.force_update()
 
     def check_queue(self):
-        if self.message_queue.empty():
+        if self.communicator.is_message_empty():
             return
         self.new_popup()
 
@@ -91,7 +91,7 @@ class MainApp:
         pos = self._get_free_slot()
         if pos is None:
             return
-        msg = self.message_queue.get_nowait()
+        msg = self.communicator.get_message()
         new_window = Toplevel(self.parent)
 
         app = MessagePopup(
@@ -151,7 +151,7 @@ class Popup(Frame):
 
 
 class CounterWindow(Popup):
-    LABEL_SIZE = 88
+    LABEL_SIZE = 75
     LABEL_PAD = 1
     LABEL_FONT_SIZE = 30
 
@@ -169,26 +169,35 @@ class CounterWindow(Popup):
         self.labels = {}
         for label_pos in sorted(label_colors.keys()):
             label_color = label_colors[label_pos]
-            self.labels[label_color] = Label(
+            frame, self.labels[label_color] = self.make_label(
                 self,
-                background=label_color,
+                self.LABEL_SIZE,
                 width=3,
                 height=self.LABEL_SIZE,
                 foreground="white",
                 font=("Roboto", self.LABEL_FONT_SIZE),
                 text='0'
             )
-            self.labels[label_color].pack(
+            frame.pack(
                 padx=self.LABEL_PAD,
                 pady=self.LABEL_PAD,
                 side=LEFT
             )
+
         self.show()
+
+    @staticmethod
+    def make_label(master, size, *args, **kwargs):
+        frame = Frame(master, height=size, width=size)
+        frame.pack_propagate(0)
+        label = Label(frame, *args, **kwargs)
+        label.pack(fill=BOTH, expand=YES)
+        return frame, label
 
     def set_counter(self, color, value):
         if color not in self.labels.keys():
             return
-
+        self.labels[color].config(background=color if value > 0 else "#9E9E9E")
         self.labels[color].config(text=str(value))
 
 
