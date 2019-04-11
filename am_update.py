@@ -4,7 +4,7 @@ from time import sleep
 
 import requests
 
-from parser import get_led_options, get_counters
+from parser import get_counters
 
 
 class CounterGetter:
@@ -22,7 +22,7 @@ class CounterGetter:
         self.last_update = datetime.now() - timedelta(hours=1)
 
     def _get_url(self):
-        return "https://{}/{}?receivers={}".format(self.host, self.PATH, ",".join(self.receivers))
+        return "{}/{}?receivers={}".format(self.host, self.PATH, ",".join(self.receivers))
 
     def update_counters(self):
         if self.last_update + timedelta(seconds=self.ttl) > datetime.now():
@@ -33,7 +33,6 @@ class CounterGetter:
             return
 
         self.counters = get_counters(response.json())
-        self.communicator.put_led_task(get_led_options(response.json()))
         self.last_update = datetime.now()
 
     def get_counters(self):

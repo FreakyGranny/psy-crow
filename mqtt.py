@@ -10,8 +10,9 @@ UPDATE_EVENT = "<<UpdateCounters>>"
 
 
 class QClient(mqtt.Client):
-    def __init__(self, communicator, root, topic):
+    def __init__(self, config, communicator, root, topic):
         mqtt.Client.__init__(self)
+        self.config = config
         self.communicator = communicator
         self.root = root
         self.topic = topic
@@ -23,9 +24,10 @@ class MqttThread(Thread):
         self.config = config
         self.root = root
         self.client = QClient(
+            config=config,
             communicator=communicator,
             root=self.root,
-            topic=self.config["topic"]
+            topic=self.config.mqtt_connection["topic"]
         )
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
@@ -40,7 +42,7 @@ class MqttThread(Thread):
     @staticmethod
     def _on_message(client, userdata, msg):
         client.root.event_generate(UPDATE_EVENT)
-        for message in get_messages(msg.payload.decode("utf-8")):
+        for message in get_messages(client.config, msg.payload.decode("utf-8")):
             client.communicator.put_message(message)
 
         client.root.event_generate(MESSAGE_EVENT)
@@ -49,8 +51,8 @@ class MqttThread(Thread):
         sleep(2)
         try:
             self.client.connect(
-                host=self.config["host"],
-                port=self.config["port"],
+                host=self.config.mqtt_connection["host"],
+                port=self.config.mqtt_connection["port"],
                 keepalive=60,
             )
             sleep(1)
@@ -60,7 +62,7 @@ class MqttThread(Thread):
                 Message(
                     title="System",
                     text=str(e),
-                    color="#707070"
+                    color=self.config.get_color("system")
                 )
             )
             self.client.root.event_generate(MESSAGE_EVENT)

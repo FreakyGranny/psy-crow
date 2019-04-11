@@ -18,7 +18,7 @@ class Config:
     FIELD_SHOW_TIME = "show_time"
     FIELD_RECEIVERS = "receivers"
     FIELD_AM_HOST = "am_host"
-    FIELD_LED = "led"
+    FIELD_COLORS = "colors"
 
     def __init__(self):
         config_path = os.path.join(
@@ -38,4 +38,10 @@ class Config:
         self.show_time = yaml_content.get(self.FIELD_SHOW_TIME)
         self.am_host = yaml_content.get(self.FIELD_AM_HOST)
         self.receivers = yaml_content.get(self.FIELD_RECEIVERS)
-        self.led_enabled = yaml_content.get(self.FIELD_LED)
+        self.colors = yaml_content.get(self.FIELD_COLORS)
+
+    def get_color(self, severity):
+        if severity in self.colors.keys():
+            return self.colors.get(severity)
+
+        return "#707070"

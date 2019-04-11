@@ -13,6 +13,7 @@ class MainApp:
 
         self.counter_updater = counter_updater
         self.counters = config.counters
+        self.config = config
         self.counter_app = None
         self.popup_show_time = int(config.show_time) * 1000
 
@@ -71,10 +72,14 @@ class MainApp:
             self.counter_app = None
             return
 
+        counter_colors = {}
+        for pos, severity in self.counters.items():
+            counter_colors[pos] = self.config.get_color(severity)
+
         self.counter_app = CounterWindow(
             parent=Toplevel(self.parent),
             screen_width=self.screen_width,
-            label_colors=self.counters
+            label_colors=counter_colors
         )
         self.update_counter_window()
 
@@ -83,8 +88,8 @@ class MainApp:
             return
 
         counters = self.counter_updater.get_counters()
-        for color, value in counters.items():
-            self.counter_app.set_counter(color, value)
+        for severity, value in counters.items():
+            self.counter_app.set_counter(self.config.get_color(severity), value)
         self.parent.after(60000, self.update_counter_window)
 
     def new_popup(self):
