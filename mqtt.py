@@ -1,5 +1,6 @@
 from threading import Thread
 from time import sleep
+from uuid import uuid4
 
 import paho.mqtt.client as mqtt
 
@@ -11,7 +12,12 @@ UPDATE_EVENT = "<<UpdateCounters>>"
 
 class QClient(mqtt.Client):
     def __init__(self, config, communicator, root, topic):
-        mqtt.Client.__init__(self)
+        id = "psy-crow-{}-{}".format(
+            config.mqtt_connection.get("topic").replace("/", "-"),
+            str(uuid4())[:8]
+        )
+
+        mqtt.Client.__init__(self, client_id=id)
         self.config = config
         self.communicator = communicator
         self.root = root
